@@ -41,21 +41,23 @@ export default function LoginPage() {
       dispatch(setAuthLoading(true));
 
       const res = await authService.login(formData);
-console.log("LOGIN RESPONSE =>", res);
-      const accessToken = res?.data?.accessToken || res?.accessToken;
-      const user = res?.data?.user || res?.user;
+
+const accessToken = res?.data?.accessToken || res?.accessToken;
+const refreshToken = res?.data?.refreshToken || res?.refreshToken;
+const user = res?.data?.user || res?.user;
 
       if (!accessToken) {
         toast.error("Access token not found");
         return;
       }
 
-      dispatch(
-        setCredentials({
-          user,
-          accessToken,
-        })
-      );
+dispatch(
+  setCredentials({
+    user,
+    accessToken,
+    refreshToken,
+  })
+);
 
       toast.success("Login successful");
       router.push("/dashboard");

@@ -19,6 +19,10 @@ const authSlice = createSlice({
 
       if (typeof window !== "undefined") {
         localStorage.setItem("accessToken", action.payload.accessToken);
+
+        localStorage.setItem("refreshToken",action.payload.refreshToken);
+
+        localStorage.setItem("user",JSON.stringify(action.payload.user));
       }
     },
 
@@ -34,6 +38,8 @@ const authSlice = createSlice({
 
       if (typeof window !== "undefined") {
         localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("user");
       }
     },
 
