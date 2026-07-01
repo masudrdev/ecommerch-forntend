@@ -29,4 +29,12 @@ export const vendorService = {
     });
     return res.data;
   },
+addOrderNote: async (orderId, data) => {
+  const res = await api.post(`/orders/vendor/orders/${orderId}/notes`, data);
+  return res.data;
+},
+
+
+
+
 };
