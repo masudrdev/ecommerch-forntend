@@ -43,10 +43,16 @@ export default function DashboardSidebar({
       w-72 max-w-[85vw]`}
     >
       <div className="flex items-center justify-between border-b border-white/10 p-5">
-        <Link href="/dashboard" className="block text-xl font-bold">
-          {collapsed ? <span className="hidden lg:inline">D</span> : "Dashboard"}
-          <span className="lg:hidden">Dashboard</span>
-        </Link>
+<Link href="/dashboard" className="block text-xl font-bold text-white">
+  {collapsed ? (
+    <>
+      <span className="hidden lg:inline">D</span>
+      <span className="lg:hidden">Dashboard</span>
+    </>
+  ) : (
+    <span>Dashboard</span>
+  )}
+</Link>
 
         <button
           className="rounded-lg border border-white/10 p-2 lg:hidden"

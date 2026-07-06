@@ -66,4 +66,32 @@ deleteImage: async (imageId) => {
     const res = await api.get("/brands");
     return res.data;
   },
+getAdminProducts: async ({
+  search = "",
+  categoryId = "",
+  vendorId = "",
+  status = "ALL",
+  sort = "newest",
+  page = 1,
+  limit = 10,
+} = {}) => {
+  const res = await api.get("/products/admin/all", {
+    params: {
+      search,
+      categoryId,
+      vendorId,
+      status,
+      sort,
+      page,
+      limit,
+    },
+  });
+
+  return res.data;
+},
+
+updateProductStatus: async (id, status) => {
+  const res = await api.patch(`/products/${id}/status`, { status });
+  return res.data;
+},
 };

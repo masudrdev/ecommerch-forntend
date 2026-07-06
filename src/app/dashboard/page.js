@@ -2,23 +2,22 @@
 
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
+import { ShoppingCart, Clock, CheckCircle, Package,Wallet  } from "lucide-react";
 import Link from "next/link";
-import {
-  Package,
-  ShoppingCart,
-  Clock,
-  CheckCircle,
-  Wallet,
-  Plus,
-} from "lucide-react";
+
 import { ROLES } from "@/constants/roles";
 import { dashboardService } from "@/services/dashboard.service";
 import { vendorService } from "@/services/vendor.service";
 import { getMyOrdersApi } from "@/services/order.service";
 
-function money(value) {
-  return `৳${Number(value || 0).toLocaleString("en-BD")}`;
-}
+import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import StatCards from "@/components/dashboard/StatCards";
+import SalesChart from "@/components/dashboard/SalesChart";
+import LatestOrders from "@/components/dashboard/LatestOrders";
+import LatestReviews from "@/components/dashboard/LatestReviews";
+import LowStock from "@/components/dashboard/LowStock";
+import TopSelling from "@/components/dashboard/TopSelling";
+const money = (amount) => `৳${Number(amount || 0).toLocaleString("en-BD")}`;
 
 function StatCard({ title, value, icon: Icon }) {
   return (
@@ -39,127 +38,7 @@ function StatCard({ title, value, icon: Icon }) {
   );
 }
 
-function VendorOverview({ stats }) {
-  const cards = [
-    {
-      title: "Total Products",
-      value: stats.totalProducts || 0,
-      icon: Package,
-    },
-    {
-      title: "Total Orders",
-      value: stats.totalOrders || 0,
-      icon: ShoppingCart,
-    },
-    {
-      title: "Pending Orders",
-      value: stats.pendingOrders || 0,
-      icon: Clock,
-    },
-    {
-      title: "Completed Orders",
-      value: stats.completedOrders || 0,
-      icon: CheckCircle,
-    },
-    {
-      title: "Total Sales",
-      value: money(stats.totalSales),
-      icon: Wallet,
-    },
-  ];
-
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Vendor Dashboard</h1>
-          <p className="mt-1 text-sm text-gray-400">
-            Manage products, orders, stock and sales.
-          </p>
-        </div>
-
-        <Link
-          href="/dashboard/products/add"
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-        >
-          <Plus size={18} />
-          Add Product
-        </Link>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        {cards.map((card) => (
-          <StatCard key={card.title} {...card} />
-        ))}
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-xl border border-white/10 bg-[#1E293B] p-5">
-          <h2 className="text-lg font-bold text-white">Quick Actions</h2>
-
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <Link
-              href="/dashboard/products"
-              className="rounded-lg bg-[#334155] p-4 text-sm font-semibold text-white hover:bg-[#475569]"
-            >
-              Manage Products
-            </Link>
-
-            <Link
-              href="/dashboard/orders"
-              className="rounded-lg bg-[#334155] p-4 text-sm font-semibold text-white hover:bg-[#475569]"
-            >
-              Manage Orders
-            </Link>
-
-            <Link
-              href="/dashboard/payouts"
-              className="rounded-lg bg-[#334155] p-4 text-sm font-semibold text-white hover:bg-[#475569]"
-            >
-              View Payouts
-            </Link>
-
-            <Link
-              href="/dashboard/profile"
-              className="rounded-lg bg-[#334155] p-4 text-sm font-semibold text-white hover:bg-[#475569]"
-            >
-              Shop Profile
-            </Link>
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-white/10 bg-[#1E293B] p-5">
-          <h2 className="text-lg font-bold text-white">Insights</h2>
-
-          <div className="mt-4 space-y-3 text-sm text-gray-300">
-            <p>
-              Pending orders:{" "}
-              <span className="font-bold text-orange-400">
-                {stats.pendingOrders || 0}
-              </span>
-            </p>
-
-            <p>
-              Completed orders:{" "}
-              <span className="font-bold text-green-400">
-                {stats.completedOrders || 0}
-              </span>
-            </p>
-
-            <p>
-              Total sales:{" "}
-              <span className="font-bold text-blue-400">
-                {money(stats.totalSales)}
-              </span>
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CustomerOverview({ stats, orders }) {
+function CustomerOverview({ stats }) {
   return (
     <div className="space-y-6">
       <div>
@@ -173,43 +52,169 @@ function CustomerOverview({ stats, orders }) {
         <StatCard title="Delivered Orders" value={stats.deliveredOrders || 0} icon={CheckCircle} />
         <StatCard title="Wishlist Items" value={stats.wishlistItems || 0} icon={Package} />
       </div>
+    </div>
+  );
+}
 
-      <div className="rounded-xl border border-white/10 bg-[#1E293B] p-5">
-        <h2 className="text-lg font-bold text-white">Recent Orders</h2>
+function VendorOverview({
+  stats,
+  chartPeriod,
+  handleChartPeriodChange,
+  chartLoading,
+}) {
+  return (
+    <div className="space-y-6">
+      <DashboardHeader />
 
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[650px] text-left text-sm">
-            <thead>
-              <tr className="border-b border-white/10 text-gray-400">
-                <th className="pb-3">Order</th>
-                <th className="pb-3">Date</th>
-                <th className="pb-3">Amount</th>
-                <th className="pb-3">Status</th>
-              </tr>
-            </thead>
+      <StatCards stats={stats} />
 
-            <tbody>
-              {orders.slice(0, 5).map((order) => (
-                <tr key={order.id} className="border-b border-white/5">
-                  <td className="py-4 text-white">{order.orderNumber || order.id}</td>
-                  <td className="py-4 text-gray-300">
-                    {new Date(order.createdAt).toLocaleDateString("en-BD")}
-                  </td>
-                  <td className="py-4 text-gray-300">{money(order.totalAmount)}</td>
-                  <td className="py-4 text-orange-400">{order.orderStatus}</td>
-                </tr>
-              ))}
+      <SalesChart
+        data={stats.salesChart || []}
+        chartPeriod={chartPeriod}
+        handleChartPeriodChange={handleChartPeriodChange}
+        chartLoading={chartLoading}
+      />
 
-              {orders.length === 0 && (
-                <tr>
-                  <td colSpan="4" className="py-6 text-center text-gray-400">
-                    No orders found.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+      <div className="grid gap-4 xl:grid-cols-2">
+        <LatestOrders orders={stats.latestOrders || []} />
+        <LatestReviews reviews={stats.latestReviews || []} />
+        <LowStock products={stats.lowStockProducts || []} />
+        <TopSelling products={stats.topSellingProducts || []} />
+      </div>
+    </div>
+  );
+}
+function AdminOverview({ stats }) {
+  const cards = [
+    { title: "Total Orders", value: stats.totalOrders || 0, icon: ShoppingCart },
+    { title: "Pending Orders", value: stats.pendingOrders || 0, icon: Clock },
+    { title: "Completed Orders", value: stats.completedOrders || 0, icon: CheckCircle },
+    { title: "Cancelled Orders", value: stats.cancelledOrders || 0, icon: Package },
+
+    { title: "Total Products", value: stats.totalProducts || 0, icon: Package },
+    { title: "Pending Products", value: stats.pendingProducts || 0, icon: Clock },
+    { title: "Approved Products", value: stats.approvedProducts || 0, icon: CheckCircle },
+    { title: "Rejected Products", value: stats.rejectedProducts || 0, icon: Package },
+
+    { title: "Total Vendors", value: stats.totalVendors || 0, icon: Wallet },
+    { title: "Pending Vendors", value: stats.pendingVendors || 0, icon: Clock },
+    { title: "Approved Vendors", value: stats.approvedVendors || 0, icon: CheckCircle },
+
+    { title: "Total Customers", value: stats.totalCustomers || 0, icon: ShoppingCart },
+  ];
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
+        <p className="mt-1 text-gray-500">
+          Orders, products, vendors and customer overview.
+        </p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {cards.map((card) => (
+          <StatCard
+            key={card.title}
+            title={card.title}
+            value={card.value}
+            icon={card.icon}
+          />
+        ))}
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <DashboardTable
+          title="Latest Orders"
+          items={stats.latestOrders || []}
+renderItem={(order) => (
+  <Link
+    href={`/dashboard/orders/${order.id}`}
+    className="flex items-center justify-between rounded-lg border border-white/10 bg-[#0F172A] p-3 transition hover:border-blue-500"
+  >
+    <div>
+      <p className="font-semibold text-white">{order.orderNumber}</p>
+      <p className="text-sm text-gray-400">{order.customerName || "Customer Name"}</p>
+    </div>
+    <div className="text-right">
+      <p className="font-semibold text-white">{money(order.totalAmount)}</p>
+      <p className="text-xs uppercase text-gray-400">{order.orderStatus}</p>
+    </div>
+  </Link>
+)}
+        />
+
+        <DashboardTable
+          title="Pending Vendor Approval"
+          items={stats.pendingVendorApproval || []}
+renderItem={(vendor) => (
+  <Link
+    href={`/dashboard/vendors`}
+    className="block rounded-lg border border-white/10 bg-[#0F172A] p-3 transition hover:border-blue-500"
+  >
+    <p className="font-semibold text-white">{vendor.shopName}</p>
+    <p className="text-sm text-gray-400">
+      {vendor.user?.name || "Vendor"} · {vendor.user?.phone || vendor.user?.email || "No contact"}
+    </p>
+  </Link>
+)}
+        />
+
+        <DashboardTable
+          title="Pending Product Approval"
+          items={stats.pendingProductApproval || []}
+renderItem={(product) => (
+  <Link
+    href={`/dashboard/products`}
+    className="flex items-center justify-between rounded-lg border border-white/10 bg-[#0F172A] p-3 transition hover:border-blue-500"
+  >
+    <div>
+      <p className="font-semibold text-white">{product.name}</p>
+      <p className="text-sm text-gray-400">
+        {product.vendor?.shopName || "No vendor"}
+      </p>
+    </div>
+    <p className="font-semibold text-white">{money(product.price)}</p>
+  </Link>
+)}
+        />
+
+        <DashboardTable
+          title="Low Stock Products"
+          items={stats.lowStockProducts || []}
+renderItem={(product) => (
+  <Link
+    href={`/dashboard/products`}
+    className="flex items-center justify-between rounded-lg border border-white/10 bg-[#0F172A] p-3 transition hover:border-red-500"
+  >
+    <div>
+      <p className="font-semibold text-white">{product.name}</p>
+      <p className="text-sm text-gray-400">
+        {product.vendor?.shopName || "No vendor"}
+      </p>
+    </div>
+    <p className="font-semibold text-red-400">
+      Stock: {product.stock || 0}
+    </p>
+  </Link>
+)}
+        />
+      </div>
+    </div>
+  );
+}
+
+function DashboardTable({ title, items, renderItem }) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-[#1E293B] p-4 shadow-sm">
+      <h2 className="mb-4 text-lg font-semibold">{title}</h2>
+
+      <div className="space-y-3">
+        {items.length > 0 ? (
+          items.map((item) => <div key={item.id}>{renderItem(item)}</div>)
+        ) : (
+          <p className="text-sm text-gray-500">No data found.</p>
+        )}
       </div>
     </div>
   );
@@ -222,7 +227,28 @@ export default function DashboardPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const [chartPeriod, setChartPeriod] = useState("7d");
+  const [chartLoading, setChartLoading] = useState(false);
+
   const role = user?.role || ROLES.CUSTOMER;
+
+  const handleChartPeriodChange = async (period) => {
+    try {
+      setChartPeriod(period);
+      setChartLoading(true);
+
+      const res = await vendorService.getSalesChart(period);
+
+      setStats((prev) => ({
+        ...prev,
+        salesChart: res?.salesChart || [],
+      }));
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setChartLoading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -232,7 +258,7 @@ export default function DashboardPage() {
         setLoading(true);
 
         if (role === ROLES.VENDOR) {
-          const res = await vendorService.getDashboard();
+          const res = await vendorService.getDashboard(chartPeriod);
           setStats(res?.dashboard || {});
         } else if (role === ROLES.CUSTOMER) {
           const res = await dashboardService.getCustomerDashboard();
@@ -259,7 +285,7 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {[1, 2, 3, 4].map((item) => (
+        {[1, 2, 3, 4, 5, 6, 7, 8].map((item) => (
           <div
             key={item}
             className="h-28 animate-pulse rounded-xl bg-[#1E293B]"
@@ -270,8 +296,19 @@ export default function DashboardPage() {
   }
 
   if (role === ROLES.VENDOR) {
-    return <VendorOverview stats={stats} />;
+    return (
+      <VendorOverview
+        stats={stats}
+        chartPeriod={chartPeriod}
+        handleChartPeriodChange={handleChartPeriodChange}
+        chartLoading={chartLoading}
+      />
+    );
   }
 
-  return <CustomerOverview stats={stats} orders={orders} />;
+  if (role === ROLES.ADMIN || role === ROLES.SUPER_ADMIN) {
+  return <AdminOverview stats={stats} />;
+}
+
+return <CustomerOverview stats={stats} orders={orders} />;
 }

@@ -1,10 +1,12 @@
 import api from "@/lib/axios";
 
 export const vendorService = {
-  getDashboard: async () => {
-    const res = await api.get("/vendors/dashboard");
-    return res.data;
-  },
+getDashboard: async (period = "7d") => {
+  const res = await api.get("/vendors/dashboard", {
+    params: { period },
+  });
+  return res.data;
+},
 
   getProfile: async () => {
     const res = await api.get("/vendors/me");
@@ -29,10 +31,28 @@ export const vendorService = {
     });
     return res.data;
   },
+  getSalesChart: async (period = "7d") => {
+  const res = await api.get("/vendors/dashboard/sales-chart", {
+    params: { period },
+  });
+  return res.data;
+},
+getAllVendors: async ({ status = "ALL", search = "" } = {}) => {
+  const res = await api.get("/vendors", {
+    params: { status, search },
+  });
+  return res.data;
+},
+
+updateVendorStatus: async (id, status) => {
+  const res = await api.patch(`/vendors/${id}/status`, { status });
+  return res.data;
+},
 addOrderNote: async (orderId, data) => {
   const res = await api.post(`/orders/vendor/orders/${orderId}/notes`, data);
   return res.data;
-},
+}
+
 
 
 
