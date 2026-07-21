@@ -90,8 +90,29 @@ getAdminProducts: async ({
   return res.data;
 },
 
-updateProductStatus: async (id, status) => {
-  const res = await api.patch(`/products/${id}/status`, { status });
+// updateProductStatus: async (id, status) => {
+//   const res = await api.patch(`/products/${id}/status`, { status });
+//   return res.data;
+// },
+reviewProduct: async (id, payload) => {
+  if (!id) {
+    throw new Error("Product ID is required");
+  }
+
+  const res = await api.patch(
+    `/admin/products/${id}/review`,
+    payload
+  );
+
+  return res.data;
+},
+
+bulkReviewProducts: async (payload) => {
+  const res = await api.patch(
+    "/admin/products/bulk-review",
+    payload
+  );
+
   return res.data;
 },
 };
