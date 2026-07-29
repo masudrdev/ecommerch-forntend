@@ -312,6 +312,26 @@ export default function OrderDetailsPage() {
   ] = useState(null);
 
   const [
+    cancellingCustomerItemId,
+    setCancellingCustomerItemId,
+  ] = useState(null);
+
+  const [
+    cancelModalItemId,
+    setCancelModalItemId,
+  ] = useState(null);
+
+  const [
+    cancellationReason,
+    setCancellationReason,
+  ] = useState("");
+
+  const [
+    cancellationError,
+    setCancellationError,
+  ] = useState("");
+
+  const [
     selectedReturnStatus,
     setSelectedReturnStatus,
   ] = useState({});
@@ -516,12 +536,70 @@ export default function OrderDetailsPage() {
      ITEM STATUS UPDATE
   ====================================================== */
 
+  const updateItemStatus = async (
+    itemId,
+    itemStatus,
+    reason = ""
+  ) => {
+    try {
+      setUpdatingItemId(itemId);
+
+      if (isVendor) {
+        await orderDetailsService.updateVendorItemStatus(
+          itemId,
+          itemStatus
+        );
+      } else {
+        await orderDetailsService.updateAdminItemStatus(
+          itemId,
+          itemStatus,
+          reason
+        );
+      }
+
+      setSelectedItemStatus(
+        (previous) => ({
+          ...previous,
+          [itemId]: "",
+        })
+      );
+
+      setCancelModalItemId(null);
+      setCancellationReason("");
+      setCancellationError("");
+
+      await fetchOrder();
+
+      alert(
+        itemStatus === "CANCELLED"
+          ? "Item cancelled successfully."
+          : "Item status updated successfully."
+      );
+    } catch (error) {
+      console.error(
+        "Item status update error:",
+        error?.response?.data || error
+      );
+
+      const message =
+        error?.response?.data?.message ||
+        `Item status update failed (${
+          error?.response?.status || "error"
+        }).`;
+
+      if (itemStatus === "CANCELLED") {
+        setCancellationError(message);
+      } else {
+        alert(message);
+      }
+    } finally {
+      setUpdatingItemId(null);
+    }
+  };
+
   const handleItemStatusUpdate =
     async (itemId) => {
-      if (
-        !isVendor &&
-        !isAdmin
-      ) {
+      if (!isVendor && !isAdmin) {
         alert(
           "You are not allowed to update item status."
         );
@@ -531,46 +609,134 @@ export default function OrderDetailsPage() {
       const itemStatus =
         selectedItemStatus[itemId];
 
-      if (
-        !itemId ||
-        !itemStatus
-      ) {
+      if (!itemId || !itemStatus) {
         alert(
           "Please select a status first."
         );
         return;
       }
 
+      if (
+        isAdmin &&
+        itemStatus === "CANCELLED"
+      ) {
+        setCancelModalItemId(itemId);
+        setCancellationReason("");
+        setCancellationError("");
+        return;
+      }
+
+      await updateItemStatus(
+        itemId,
+        itemStatus
+      );
+    };
+
+  const handleConfirmCancellation =
+    async () => {
+      const reason = String(
+        cancellationReason || ""
+      ).trim();
+
+      if (reason.length < 5) {
+        setCancellationError(
+          "Please write a cancellation reason of at least 5 characters."
+        );
+        return;
+      }
+
+      if (!cancelModalItemId) {
+        setCancellationError(
+          "Order item was not found. Close the popup and try again."
+        );
+        return;
+      }
+
+      setCancellationError("");
+
+      await updateItemStatus(
+        cancelModalItemId,
+        "CANCELLED",
+        reason
+      );
+    };
+
+  const handleCustomerPendingItemCancel =
+    async (item) => {
+      if (!isCustomer) {
+        alert(
+          "Only customers can cancel their own pending items."
+        );
+        return;
+      }
+
+      const itemId = item?.id;
+
+      const itemStatus = String(
+        item?.itemStatus ||
+          item?.status ||
+          ""
+      ).toUpperCase();
+
+      if (!itemId) {
+        alert(
+          "Order item was not found."
+        );
+        return;
+      }
+
+      if (itemStatus !== "PENDING") {
+        alert(
+          "Only pending items can be cancelled."
+        );
+        return;
+      }
+
+      const reason = window.prompt(
+        "Write the cancellation reason (minimum 5 characters):"
+      );
+
+      if (reason === null) {
+        return;
+      }
+
+      const cleanReason = String(
+        reason || ""
+      ).trim();
+
+      if (cleanReason.length < 5) {
+        alert(
+          "Cancellation reason must be at least 5 characters."
+        );
+        return;
+      }
+
+      const confirmed = window.confirm(
+        "Are you sure you want to cancel this pending item?"
+      );
+
+      if (!confirmed) {
+        return;
+      }
+
       try {
-        setUpdatingItemId(itemId);
+        setCancellingCustomerItemId(
+          itemId
+        );
 
-        if (isVendor) {
-          await orderDetailsService.updateVendorItemStatus(
-            itemId,
-            itemStatus
-          );
-        } else {
-          await orderDetailsService.updateAdminItemStatus(
-            itemId,
-            itemStatus
-          );
-        }
-
-        setSelectedItemStatus(
-          (previous) => ({
-            ...previous,
-            [itemId]: "",
-          })
+        await orderDetailsService.cancelCustomerPendingItem(
+          itemId,
+          cleanReason
         );
 
         await fetchOrder();
 
         alert(
-          "Item status updated successfully."
+          "Pending item cancelled successfully."
         );
       } catch (error) {
         console.error(
-          "Item status update error:",
+          "Customer item cancellation error:",
           error?.response?.data ||
             error
         );
@@ -578,14 +744,12 @@ export default function OrderDetailsPage() {
         alert(
           error?.response?.data
             ?.message ||
-            `Item status update failed (${
-              error?.response
-                ?.status ||
-              "error"
-            }).`
+            "Item cancellation failed."
         );
       } finally {
-        setUpdatingItemId(null);
+        setCancellingCustomerItemId(
+          null
+        );
       }
     };
 
@@ -1677,6 +1841,43 @@ export default function OrderDetailsPage() {
                         {isCustomer && (
                           <td className="py-4">
                             {itemStatus ===
+                            "PENDING" ? (
+                              <div>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleCustomerPendingItemCancel(
+                                      item
+                                    )
+                                  }
+                                  disabled={
+                                    cancellingCustomerItemId ===
+                                    itemId
+                                  }
+                                  className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                  {cancellingCustomerItemId ===
+                                  itemId
+                                    ? "Cancelling..."
+                                    : "Cancel Item"}
+                                </button>
+
+                                <p className="mt-2 max-w-[220px] text-xs text-gray-500">
+                                  Pending items can be cancelled before vendor confirmation.
+                                </p>
+                              </div>
+                            ) : itemStatus ===
+                            "CANCELLED" ? (
+                              <div>
+                                <StatusBadge
+                                  status="CANCELLED"
+                                />
+
+                                <p className="mt-2 max-w-[220px] text-xs text-red-400">
+                                  This item has been cancelled.
+                                </p>
+                              </div>
+                            ) : itemStatus ===
                             "COMPLETED" ? (
                               <div>
                                 <button
@@ -2157,6 +2358,114 @@ export default function OrderDetailsPage() {
           </p>
         )}
       </div>
+
+      {/* ADMIN CANCELLATION REASON MODAL */}
+      {isAdmin && cancelModalItemId && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="cancel-order-item-title"
+        >
+          <div className="w-full max-w-lg rounded-2xl border border-red-500/30 bg-[#111827] p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2
+                  id="cancel-order-item-title"
+                  className="text-xl font-bold text-white"
+                >
+                  Cancel Order Item
+                </h2>
+                <p className="mt-2 text-sm text-gray-400">
+                  Write the cancellation reason. It will be saved in the order timeline.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                disabled={updatingItemId === cancelModalItemId}
+                onClick={() => {
+                  setCancelModalItemId(null);
+                  setCancellationReason("");
+                  setCancellationError("");
+                }}
+                className="rounded-lg px-3 py-1 text-xl text-gray-400 hover:bg-white/10 hover:text-white disabled:opacity-50"
+                aria-label="Close cancellation popup"
+              >
+                ×
+              </button>
+            </div>
+
+            <label
+              htmlFor="admin-cancellation-reason"
+              className="mt-5 block text-sm font-semibold text-gray-200"
+            >
+              Cancellation reason
+            </label>
+
+            <textarea
+              id="admin-cancellation-reason"
+              autoFocus
+              rows={5}
+              maxLength={500}
+              value={cancellationReason}
+              onChange={(event) => {
+                setCancellationReason(event.target.value);
+                if (cancellationError) {
+                  setCancellationError("");
+                }
+              }}
+              placeholder="Example: Customer requested cancellation because the delivery address was incorrect."
+              className="mt-2 w-full resize-none rounded-xl border border-slate-600 bg-slate-800 px-4 py-3 text-sm text-white outline-none placeholder:text-gray-500 focus:border-red-400"
+            />
+
+            <div className="mt-2 flex items-center justify-between gap-3">
+              <p className="text-xs text-gray-500">
+                Minimum 5 characters
+              </p>
+              <p className="text-xs text-gray-500">
+                {cancellationReason.length}/500
+              </p>
+            </div>
+
+            {cancellationError && (
+              <p className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+                {cancellationError}
+              </p>
+            )}
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                disabled={updatingItemId === cancelModalItemId}
+                onClick={() => {
+                  setCancelModalItemId(null);
+                  setCancellationReason("");
+                  setCancellationError("");
+                }}
+                className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-gray-200 hover:bg-slate-800 disabled:opacity-50"
+              >
+                Keep Order
+              </button>
+
+              <button
+                type="button"
+                disabled={
+                  updatingItemId === cancelModalItemId ||
+                  cancellationReason.trim().length < 5
+                }
+                onClick={handleConfirmCancellation}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {updatingItemId === cancelModalItemId
+                  ? "Cancelling..."
+                  : "Confirm Cancellation"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

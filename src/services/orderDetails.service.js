@@ -98,7 +98,8 @@ export const orderDetailsService = {
 
   updateAdminItemStatus: async (
     itemId,
-    itemStatus
+    itemStatus,
+    cancellationReason = ""
   ) => {
     if (!itemId || !itemStatus) {
       throw new Error(
@@ -111,6 +112,16 @@ export const orderDetailsService = {
       {
         itemStatus,
         status: itemStatus,
+        ...(String(itemStatus).toUpperCase() === "CANCELLED"
+          ? {
+              cancellationReason: String(
+                cancellationReason || ""
+              ).trim(),
+              reason: String(
+                cancellationReason || ""
+              ).trim(),
+            }
+          : {}),
       }
     );
 
@@ -162,6 +173,36 @@ updateVendorReturnStatus: async (
 
   return response.data;
 },
+  cancelCustomerPendingItem: async (
+    itemId,
+    reason
+  ) => {
+    if (!itemId) {
+      throw new Error(
+        "Order item ID is required"
+      );
+    }
+
+    const cleanReason = String(
+      reason || ""
+    ).trim();
+
+    if (cleanReason.length < 5) {
+      throw new Error(
+        "Cancellation reason must be at least 5 characters"
+      );
+    }
+
+    const response = await api.patch(
+      `/orders/customer/items/${itemId}/cancel`,
+      {
+        reason: cleanReason,
+      }
+    );
+
+    return response.data;
+  },
+
   requestCustomerReturn: async (
   itemId,
   reason
