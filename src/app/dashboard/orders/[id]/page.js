@@ -532,6 +532,85 @@ export default function OrderDetailsPage() {
         "PENDING"
     ).toUpperCase();
 
+
+  const financialSummary =
+    useMemo(() => {
+      return visibleItems.reduce(
+        (result, item) => {
+          const itemStatus = String(
+            item?.itemStatus ||
+              item?.status ||
+              ""
+          ).toUpperCase();
+
+          const financialEligible =
+            item?.financialEligible !== false &&
+            itemStatus !== "CANCELLED";
+
+          if (!financialEligible) {
+            return result;
+          }
+
+          const price = Number(
+            item?.price || 0
+          );
+
+          const quantity = Number(
+            item?.quantity || 0
+          );
+
+          const subtotal = Number(
+            item?.subtotal ??
+              price * quantity
+          );
+
+          const commission = Number(
+            item?.platformEarning ??
+              item?.commissionAmount ??
+              0
+          );
+
+          const vendorEarning = Number(
+            item?.vendorEarning ??
+              Math.max(
+                subtotal - commission,
+                0
+              )
+          );
+
+          result.productTotal +=
+            subtotal;
+
+          result.totalCommission +=
+            commission;
+
+          result.totalVendorEarning +=
+            vendorEarning;
+
+          return result;
+        },
+        {
+          productTotal: 0,
+          totalCommission: 0,
+          totalVendorEarning: 0,
+        }
+      );
+    }, [visibleItems]);
+
+  const deliveryFee = Number(
+    order?.deliveryFee ??
+      order?.shippingCharge ??
+      order?.shippingFee ??
+      0
+  );
+
+  const grandTotal = Number(
+    order?.grandTotal ??
+      order?.totalAmount ??
+      financialSummary.productTotal +
+        deliveryFee
+  );
+
   /* ======================================================
      ITEM STATUS UPDATE
   ====================================================== */
@@ -1058,13 +1137,8 @@ export default function OrderDetailsPage() {
 
   const displayedTotal =
     isVendor
-      ? order?.vendorTotal ??
-        order?.totalAmount ??
-        order?.total
-      : order?.totalAmount ??
-        order?.grandTotal ??
-        order?.total ??
-        order?.vendorTotal;
+      ? financialSummary.totalVendorEarning
+      : grandTotal;
 
   return (
     <div className="space-y-5">
@@ -1128,23 +1202,87 @@ export default function OrderDetailsPage() {
           </InfoCard>
         )}
 
-        <InfoCard
-          label={
-            isVendor
-              ? "Vendor Total"
-              : "Order Total"
-          }
-        >
-          <h3 className="text-2xl font-bold text-white">
-            ৳
-            {formatMoney(
-              displayedTotal
-            )}
-          </h3>
-        </InfoCard>
+        {(isVendor ||
+          isAdmin) && (
+          <InfoCard label="Product Total">
+            <h3 className="text-2xl font-bold text-white">
+              ৳
+              {formatMoney(
+                financialSummary.productTotal
+              )}
+            </h3>
+          </InfoCard>
+        )}
+
+        {(isVendor ||
+          isAdmin) && (
+          <InfoCard label="Commission">
+            <h3 className="text-2xl font-bold text-orange-400">
+              ৳
+              {formatMoney(
+                financialSummary.totalCommission
+              )}
+            </h3>
+          </InfoCard>
+        )}
+
+        {isVendor && (
+          <InfoCard label="Your Earning">
+            <h3 className="text-2xl font-bold text-green-400">
+              ৳
+              {formatMoney(
+                financialSummary.totalVendorEarning
+              )}
+            </h3>
+          </InfoCard>
+        )}
+
+        {isAdmin && (
+          <InfoCard label="Vendor Earning">
+            <h3 className="text-2xl font-bold text-purple-400">
+              ৳
+              {formatMoney(
+                financialSummary.totalVendorEarning
+              )}
+            </h3>
+          </InfoCard>
+        )}
+
+        {isAdmin && (
+          <InfoCard label="Delivery Fee">
+            <h3 className="text-2xl font-bold text-white">
+              ৳
+              {formatMoney(
+                deliveryFee
+              )}
+            </h3>
+          </InfoCard>
+        )}
+
+        {!isVendor && (
+          <InfoCard label="Grand Total">
+            <h3 className="text-2xl font-bold text-white">
+              ৳
+              {formatMoney(
+                grandTotal
+              )}
+            </h3>
+          </InfoCard>
+        )}
+
+        {isCustomer && (
+          <InfoCard label="Order Total">
+            <h3 className="text-2xl font-bold text-white">
+              ৳
+              {formatMoney(
+                displayedTotal
+              )}
+            </h3>
+          </InfoCard>
+        )}
 
         <InfoCard label="Payment">
-          <p className="font-bold text-white">
+          <p className="font-semibold text-white">
             {order?.paymentMethod ||
               "COD"}
           </p>
@@ -1187,7 +1325,7 @@ export default function OrderDetailsPage() {
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1500px] text-left text-sm">
+            <table className="w-full min-w-[1750px] text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-700 text-gray-400">
                   <th className="pb-3">
@@ -1221,6 +1359,25 @@ export default function OrderDetailsPage() {
                   <th className="pb-3">
                     Subtotal
                   </th>
+
+                  {(isVendor ||
+                    isAdmin) && (
+                    <th className="pb-3">
+                      Commission
+                    </th>
+                  )}
+
+                  {isVendor && (
+                    <th className="pb-3">
+                      Your Earning
+                    </th>
+                  )}
+
+                  {isAdmin && (
+                    <th className="pb-3">
+                      Vendor Earning
+                    </th>
+                  )}
 
                   <th className="pb-3">
                     Item Status
@@ -1405,6 +1562,36 @@ export default function OrderDetailsPage() {
                       returnFormItemId ===
                       itemId;
 
+                    const itemSubtotal =
+                      Number(
+                        item?.subtotal ??
+                          Number(
+                            item?.price ||
+                              0
+                          ) *
+                            Number(
+                              item?.quantity ||
+                                0
+                            )
+                      );
+
+                    const itemCommission =
+                      Number(
+                        item?.platformEarning ??
+                          item?.commissionAmount ??
+                          0
+                      );
+
+                    const itemVendorEarning =
+                      Number(
+                        item?.vendorEarning ??
+                          Math.max(
+                            itemSubtotal -
+                              itemCommission,
+                            0
+                          )
+                      );
+
                     return (
                       <tr
                         key={
@@ -1487,17 +1674,37 @@ export default function OrderDetailsPage() {
                         <td className="py-4 font-semibold text-white">
                           ৳
                           {formatMoney(
-                            item?.subtotal ??
-                              Number(
-                                item?.price ||
-                                  0
-                              ) *
-                                Number(
-                                  item?.quantity ||
-                                    0
-                                )
+                            itemSubtotal
                           )}
                         </td>
+
+                        {(isVendor ||
+                          isAdmin) && (
+                          <td className="py-4 font-semibold text-orange-400">
+                            ৳
+                            {formatMoney(
+                              itemCommission
+                            )}
+                          </td>
+                        )}
+
+                        {isVendor && (
+                          <td className="py-4 font-semibold text-green-400">
+                            ৳
+                            {formatMoney(
+                              itemVendorEarning
+                            )}
+                          </td>
+                        )}
+
+                        {isAdmin && (
+                          <td className="py-4 font-semibold text-purple-400">
+                            ৳
+                            {formatMoney(
+                              itemVendorEarning
+                            )}
+                          </td>
+                        )}
 
                         {/* ITEM STATUS */}
                         <td className="py-4">

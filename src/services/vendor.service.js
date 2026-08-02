@@ -13,12 +13,25 @@ getDashboard: async (period = "7d") => {
     return res.data;
   },
 
-  getOrders: async ({ page = 1, limit = 10, search = "", status = "ALL" } = {}) => {
-    const res = await api.get("/orders/vendor", {
-      params: { page, limit, search, status },
-    });
-    return res.data;
-  },
+ getOrders: async ({
+  page = 1,
+  limit = 10,
+  search = "",
+  status = "ALL",
+  sort = "newest",
+} = {}) => {
+  const res = await api.get("/orders/vendor", {
+    params: {
+      page,
+      limit,
+      search,
+      status,
+      sort,
+    },
+  });
+
+  return res.data;
+},
 
   getOrderDetails: async (orderId) => {
     const res = await api.get(`/orders/vendor/${orderId}`);
