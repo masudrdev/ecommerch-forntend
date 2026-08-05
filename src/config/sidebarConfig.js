@@ -41,7 +41,7 @@ export const sidebarConfig = {
     {
       group: "Support",
       icon: Ticket,
-      items: [{ title: "Support Tickets", href: "/dashboard/tickets", icon: Ticket }],
+      items: [{ title: "Support Tickets", href: "/dashboard/support", icon: Ticket }],
     },
 {
   group: "Account",
@@ -76,7 +76,7 @@ export const sidebarConfig = {
     {
       group: "Support",
       icon: Ticket,
-      items: [{ title: "Support Tickets", href: "/dashboard/tickets", icon: Ticket }],
+      items: [{ title: "Support Tickets", href: "/dashboard/support", icon: Ticket }],
     },
 {
   group: "Account",
@@ -113,7 +113,7 @@ export const sidebarConfig = {
     {
       group: "Support",
       icon: Ticket,
-      items: [{ title: "Support Tickets", href: "/dashboard/tickets", icon: Ticket }],
+      items: [{ title: "Support Tickets", href: "/dashboard/support", icon: Ticket }],
     },
   ],
 
@@ -153,7 +153,7 @@ export const sidebarConfig = {
     {
       group: "Support",
       icon: Ticket,
-      items: [{ title: "Support Tickets", href: "/dashboard/tickets", icon: Ticket }],
+      items: [{ title: "Support Tickets", href: "/dashboard/support", icon: Ticket }],
     },
     {
       group: "System",
@@ -174,7 +174,7 @@ export const sidebarConfig = {
     {
       group: "Support",
       icon: Ticket,
-      items: [{ title: "Support Tickets", href: "/dashboard/tickets", icon: Ticket }],
+      items: [{ title: "Support Tickets", href: "/dashboard/support", icon: Ticket }],
     },
     {
       group: "Customer Help",
