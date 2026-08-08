@@ -145,11 +145,42 @@ export const sidebarConfig = {
         { title: "Reviews", href: "/dashboard/reviews", icon: Star },
       ],
     },
+{
+  group: "Finance",
+  icon: Wallet,
+  items: [
     {
-      group: "Finance",
+      title: "Payout Approvals",
+      href: "/dashboard/payout-approvals",
       icon: Wallet,
-      items: [{ title: "Payout Approvals", href: "/dashboard/payout-approvals", icon: Wallet }],
     },
+    {
+      title: "Revenue",
+      href: "/dashboard/finance/revenue",
+      icon: Activity,
+    },
+    {
+      title: "Commission",
+      href: "/dashboard/finance/commission",
+      icon: Wallet,
+    },
+    {
+      title: "Vendor Earnings",
+      href: "/dashboard/finance/vendor-earnings",
+      icon: Store,
+    },
+    {
+      title: "Payout Reports",
+      href: "/dashboard/finance/payout-reports",
+      icon: Ticket,
+    },
+    {
+      title: "Transactions",
+      href: "/dashboard/finance/transactions",
+      icon: ShoppingCart,
+    },
+  ],
+},
     {
       group: "Support",
       icon: Ticket,
